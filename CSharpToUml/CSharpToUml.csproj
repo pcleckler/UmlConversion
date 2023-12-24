@@ -61,4 +61,7 @@
     </PackageReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PreBuildEvent>del /Q "D:\Drive\Programming\VB.NET\MailManagerNET\MailManager\bin\Debug\UML\*.*"</PreBuildEvent>
+  </PropertyGroup>
 </Project>
