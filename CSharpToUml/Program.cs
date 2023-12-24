@@ -61,41 +61,78 @@ namespace CSharpToUml
             }
         }
 
+        private static void CollectRelationship(Type type, string typeName, string owningTypeName, Relationship relationship)
+        {
+            if (!relationships.ContainsKey(owningTypeName))
+            {
+                relationships.Add(owningTypeName, new Dictionary<Relationship, HashSet<string>>());
+            }
+
+            if (!relationships[owningTypeName].TryGetValue(relationship, out _))
+            {
+                relationships[owningTypeName].Add(relationship, new HashSet<string>());
+            }
+
+            if (typeList.Contains(type))
+            {
+                relationships[owningTypeName][relationship].Add(typeName);
+            }
+        }
+
+        private static void CollectRelationshipAndUniqueType(Type type, string typeName, string owningTypeName, Relationship relationship)
+        {
+            CollectRelationship(type, typeName, owningTypeName, relationship);
+
+            CollectUniqueType(type, typeName);
+        }
+
         private static void CollectUmlSegments()
         {
             foreach (var type in typeList)
             {
-                var typeName = GetTypeNameAndCollectRelationships(type, string.Empty, Relationships.RefersTo);
+                var typeName = GetTypeName(type, (discoveredType, discoveredTypeName) =>
+                {
+                    CollectUniqueType(discoveredType, discoveredTypeName);
+                });
 
                 InitializeRelationshipDictionary(typeName);
 
-                if (!uniqueTypeNames.TryGetValue(typeName, out _))
-                {
-                    uniqueTypeNames.Add(typeName, type);
-                }
+                CollectUniqueType(type, typeName);
 
                 LoadUmlSegmentDictionary(typeName);
 
                 // Base Class
-                GetTypeNameAndCollectRelationships(type.BaseType, typeName, Relationships.Extends);
+                GetTypeName(type.BaseType, (discoveredType, discoveredTypeName) =>
+                {
+                    CollectRelationshipAndUniqueType(discoveredType, discoveredTypeName, typeName, Relationships.Extends);
+                });
 
                 // Declaring Type
-                GetTypeNameAndCollectRelationships(type.DeclaringType, typeName, Relationships.Extends);
+                GetTypeName(type.DeclaringType, (discoveredType, discoveredTypeName) =>
+                {
+                    CollectRelationshipAndUniqueType(discoveredType, discoveredTypeName, typeName, Relationships.Extends);
+                });
 
                 // Implemented Interfaces
                 foreach (var interfaceType in type.GetInterfaces())
                 {
-                    GetTypeNameAndCollectRelationships(interfaceType, typeName, Relationships.Extends);
+                    GetTypeName(interfaceType, (discoveredType, discoveredTypeName) =>
+                    {
+                        CollectRelationshipAndUniqueType(discoveredType, discoveredTypeName, typeName, Relationships.Extends);
+                    });
                 }
 
                 // Name
                 umlSegments[typeName][UmlSegments.Name].Add(
                     $"{(type.IsInterface ? "interface" : "class")} \"{typeName}\" {(type.IsSealed ? "<<sealed>>" : "")}");
 
+                // TODO: Handle delegates.
+
                 // Summary
                 umlSegments[typeName][UmlSegments.Summary].Add(GetSummary(type));
 
                 // Events
+                // TODO: Event handling is incomplete.
                 foreach (var e in type.GetEvents().OrderBy((info) => info.Name.ToLower()))
                 {
                     umlSegments[typeName][UmlSegments.Events].Add($"+ {e.Name}() <<signal>>");
@@ -104,9 +141,12 @@ namespace CSharpToUml
                 // Fields
                 foreach (var f in type.GetFields().OrderBy((info) => info.Name.ToLower()))
                 {
-                    var pTypeName = GetTypeNameAndCollectRelationships(f.FieldType, typeName, Relationships.ComposedOf);
+                    var fTypeName = GetTypeName(f.FieldType, (discoveredType, discoveredTypeName) =>
+                    {
+                        CollectRelationshipAndUniqueType(discoveredType, discoveredTypeName, typeName, Relationships.ComposedOf);
+                    });
 
-                    umlSegments[typeName][UmlSegments.Fields].Add($"+ {f.Name} : {pTypeName}");
+                    umlSegments[typeName][UmlSegments.Fields].Add($"+ {f.Name} : {fTypeName}");
                 }
 
                 // Properties
@@ -115,7 +155,10 @@ namespace CSharpToUml
                     var getter = (p.GetGetMethod() != null ? " <<get>>" : string.Empty);
                     var setter = (p.GetSetMethod() != null ? " <<set>>" : string.Empty);
 
-                    var pTypeName = GetTypeNameAndCollectRelationships(p.PropertyType, typeName, Relationships.ComposedOf);
+                    var pTypeName = GetTypeName(p.PropertyType, (discoveredType, discoveredTypeName) =>
+                    {
+                        CollectRelationshipAndUniqueType(discoveredType, discoveredTypeName, typeName, Relationships.ComposedOf);
+                    });
 
                     umlSegments[typeName][UmlSegments.Properties].Add($"+ {p.Name} : {pTypeName} {getter}{setter}");
                 }
@@ -123,7 +166,12 @@ namespace CSharpToUml
                 // Constructors
                 foreach (var c in type.GetConstructors())
                 {
-                    umlSegments[typeName][UmlSegments.Constructors].Add($"+ {typeName}({GetArgumentText(c.GetParameters(), type, typeName, Relationships.RefersTo)})");
+                    var argumentText = GetArgumentText(c.GetParameters(), (discoveredType, discoveredTypeName) =>
+                    {
+                        CollectRelationshipAndUniqueType(discoveredType, discoveredTypeName, typeName, Relationships.RefersTo);
+                    });
+
+                    umlSegments[typeName][UmlSegments.Constructors].Add($"+ {typeName}({argumentText})");
                 }
 
                 // Methods
@@ -137,11 +185,26 @@ namespace CSharpToUml
 
                         var extensionParameter = parameters[0];
 
-                        umlSegments[typeName][UmlSegments.Constructors].Add($"+ {GetTypeNameAndCollectRelationships(extensionParameter.ParameterType, typeName, Relationships.Extends)}.{m.Name}({GetArgumentText(parameters.Skip(1).ToArray(), type, typeName, Relationships.RefersTo)})");
+                        var extensionTypeTypeName = GetTypeName(extensionParameter.ParameterType, (discoveredType, discoveredTypeName) =>
+                        {
+                            CollectRelationshipAndUniqueType(discoveredType, discoveredTypeName, typeName, Relationships.Extends);
+                        });
+
+                        var argumentText = GetArgumentText(parameters.Skip(1).ToArray(), (discoveredType, discoveredTypeName) =>
+                        {
+                            CollectRelationshipAndUniqueType(discoveredType, discoveredTypeName, typeName, Relationships.RefersTo);
+                        });
+
+                        umlSegments[typeName][UmlSegments.Constructors].Add($"+ {extensionTypeTypeName}.{m.Name}({argumentText})");
                     }
                     else
                     {
-                        umlSegments[typeName][UmlSegments.Constructors].Add($"+ {m.Name}({GetArgumentText(m.GetParameters(), type, typeName, Relationships.RefersTo)})");
+                        var argumentText = GetArgumentText(m.GetParameters(), (discoveredType, discoveredTypeName) =>
+                        {
+                            CollectRelationshipAndUniqueType(discoveredType, discoveredTypeName, typeName, Relationships.RefersTo);
+                        });
+
+                        umlSegments[typeName][UmlSegments.Constructors].Add($"+ {m.Name}({argumentText})");
                     }
                 }
 
@@ -172,7 +235,7 @@ namespace CSharpToUml
                 {
                     if (otherTypeName == typeName) continue;
 
-                    if (typeName.StartsWith($"{otherTypeName}."))
+                    if (umlSegments.ContainsKey(typeName) && typeName.StartsWith($"{otherTypeName}."))
                     {
                         var relation = $"\"{typeName}\" {Relationships.Extends.Arrow} \"{otherTypeName}\" : {Relationships.Extends.Label}";
 
@@ -185,7 +248,23 @@ namespace CSharpToUml
             }
         }
 
-        private static string GetArgumentText(ParameterInfo[] parameters, Type type, string owningTypeName, Relationship relationship)
+        private static void CollectUniqueType(Type type, string typeName)
+        {
+            if (!uniqueTypes.TryGetValue(type, out _))
+            {
+                uniqueTypes.Add(type, typeName);
+            }
+
+            //if (typeList.Contains(type))
+            //{
+            if (!uniqueTypeNames.TryGetValue(typeName, out _))
+            {
+                uniqueTypeNames.Add(typeName, type);
+            }
+            //}
+        }
+
+        private static string GetArgumentText(ParameterInfo[] parameters, TypeDiscoveryHandler typeDiscoveryHandler)
         {
             const int MaximumArgumentsToDisplay = 5;
 
@@ -208,7 +287,7 @@ namespace CSharpToUml
                     break;
                 }
 
-                var typeName = GetTypeNameAndCollectRelationships(parameter.ParameterType, owningTypeName, relationship);
+                var typeName = GetTypeName(parameter.ParameterType, typeDiscoveryHandler);
 
                 if (parameters.Length < MaximumArgumentsToDisplay)
                 {
@@ -323,7 +402,7 @@ namespace CSharpToUml
             return string.Empty;
         }
 
-        private static string GetTypeNameAndCollectRelationships(Type type, string owningTypeName, Relationship relationship)
+        private static string GetTypeName(Type type, TypeDiscoveryHandler typeDiscoveryHandler = null)
         {
             if (type == null)
             {
@@ -371,34 +450,13 @@ namespace CSharpToUml
                 {
                     if (sb.Length > 0) sb.Append(", ");
 
-                    sb.Append(GetTypeNameAndCollectRelationships(argType, owningTypeName, relationship));
+                    sb.Append(GetTypeName(argType, typeDiscoveryHandler));
                 }
 
                 typeName = $"{typeName}<{sb}>";
             }
 
-            if (!string.IsNullOrEmpty(owningTypeName))
-            {
-                if (!relationships.ContainsKey(owningTypeName))
-                {
-                    relationships.Add(owningTypeName, new Dictionary<Relationship, HashSet<string>>());
-                }
-
-                if (!relationships[owningTypeName].TryGetValue(relationship, out _))
-                {
-                    relationships[owningTypeName].Add(relationship, new HashSet<string>());
-                }
-
-                if (typeList.Contains(type))
-                {
-                    relationships[owningTypeName][relationship].Add(typeName);
-                }
-            }
-
-            if (!uniqueTypes.TryGetValue(type, out _))
-            {
-                uniqueTypes.Add(type, typeName);
-            }
+            typeDiscoveryHandler?.Invoke(type, typeName);
 
             return typeName;
         }
