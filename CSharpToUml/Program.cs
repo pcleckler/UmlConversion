@@ -361,16 +361,17 @@ namespace CSharpToUml
                 return string.Empty;
             }
 
-            string typeName;
+            if (type.IsGenericType)
+            {
+                Type genericType = type.GetGenericTypeDefinition();
 
-            if (type.DeclaringType != null && uniqueTypes.TryGetValue(type.DeclaringType, out string declaringTypeName))
-            {
-                typeName = $"{declaringTypeName}.{type.Name}";
+                if (genericType != type)
+                {
+                    GetTypeName(genericType, typeDiscoveryHandler);
+                }
             }
-            else
-            {
-                typeName = (type.FullName ?? type.Name).Replace($"{type.Namespace}.", string.Empty).Replace('+', '.');
-            }
+
+            string typeName = (type.FullName ?? type.Name);
 
             var typeArguments = new List<Type>();
 
@@ -394,18 +395,10 @@ namespace CSharpToUml
 
             if (typeArguments.Count > 0)
             {
-                typeName = typeName.Replace($"`{typeArguments.Count}", string.Empty);
-
-                var sb = new StringBuilder();
-
                 foreach (var argType in typeArguments)
                 {
-                    if (sb.Length > 0) sb.Append(", ");
-
-                    sb.Append(GetTypeName(argType, typeDiscoveryHandler));
+                    GetTypeName(argType, typeDiscoveryHandler);
                 }
-
-                typeName = $"{typeName}<{sb}>";
             }
 
             typeDiscoveryHandler?.Invoke(type, typeName);
