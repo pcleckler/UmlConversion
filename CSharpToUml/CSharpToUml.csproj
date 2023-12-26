@@ -22,6 +22,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Debug\CSharpToUml.xml</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -63,6 +64,10 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PreBuildEvent>del /Q "D:\Drive\Programming\VB.NET\MailManagerNET\MailManager\bin\Debug\UML\*.*"</PreBuildEvent>
+    <PreBuildEvent>rem "D:\Drive\Programming\VB.NET\MailManagerNET\MailManager\bin\Debug\MailManager.exe"
+rem del /Q "D:\Drive\Programming\VB.NET\MailManagerNET\MailManager\bin\Debug\UML\*.*"
+
+rem "D:\Drive\Programming2\C#\UmlConversion\CSharpToUml\bin\Debug\CSharpToUml.exe"
+del /Q ""D:\Drive\Programming2\C#\UmlConversion\CSharpToUml\bin\Debug\UML\*.*"</PreBuildEvent>
   </PropertyGroup>
 </Project>

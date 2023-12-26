@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
-    <StartArguments>"D:\Drive\Programming\VB.NET\MailManagerNET\MailManager\bin\Debug\MailManager.exe"</StartArguments>
+    <StartArguments>"D:\Drive\Programming2\C#\UmlConversion\CSharpToUml\bin\Debug\CSharpToUml.exe"</StartArguments>
   </PropertyGroup>
 </Project>

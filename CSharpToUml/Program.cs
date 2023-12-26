@@ -342,13 +342,16 @@ namespace CSharpToUml
             // XPath query to find the comments for the current type
             string xpathQuery = $"/doc/members/member[starts-with(@name, 'T:{type.FullName}')]/summary";
 
-            // Select the summary node for the current type
-            XmlNode summaryNode = xmlComments.SelectSingleNode(xpathQuery);
-
-            // Display the comments if available
-            if (summaryNode != null)
+            if (xmlComments != null)
             {
-                return summaryNode.InnerText.Trim();
+                // Select the summary node for the current type
+                XmlNode summaryNode = xmlComments.SelectSingleNode(xpathQuery);
+
+                // Display the comments if available
+                if (summaryNode != null)
+                {
+                    return summaryNode.InnerText.Trim();
+                }
             }
 
             return string.Empty;
@@ -499,6 +502,10 @@ namespace CSharpToUml
 
         private static void OutputUmlGroup(string filename, Func<Type, bool> typeFilter, string titleNotes = "")
         {
+            var typesToOutput = umlSegments.Keys.Where(typeFilter);
+
+            if (!typesToOutput.Any()) return;
+
             var sb = new StringBuilder();
 
             sb.AppendLine("@startUml");
@@ -526,7 +533,7 @@ namespace CSharpToUml
                 return false;
             }
 
-            foreach (var type in umlSegments.Keys.Where(typeFilter))
+            foreach (var type in typesToOutput)
             {
                 if (!uniqueTypes.TryGetValue(type, out var typeName)) continue;
 
