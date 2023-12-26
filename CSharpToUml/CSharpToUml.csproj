@@ -45,11 +45,11 @@
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Relationship.cs" />
-    <Compile Include="Relationships.cs" />
+    <Compile Include="RelationshipType.cs" />
+    <Compile Include="RelationshipTypeList.cs" />
     <Compile Include="TypeDiscoveryHandler.cs" />
     <Compile Include="UmlSegment.cs" />
-    <Compile Include="UmlSegments.cs" />
+    <Compile Include="UmlSegmentList.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

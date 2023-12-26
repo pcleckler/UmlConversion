@@ -1,8 +1,8 @@
 ﻿namespace CSharpToUml
 {
-    public class Relationship
+    public class RelationshipType
     {
-        public Relationship(string label, string arrow)
+        public RelationshipType(string label, string arrow)
         {
             this.Label = label;
             this.Arrow = arrow;
