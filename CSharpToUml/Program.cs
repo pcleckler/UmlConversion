@@ -350,6 +350,7 @@ namespace CSharpToUml
                 // Display the comments if available
                 if (summaryNode != null)
                 {
+                    // TODO: Summary extraction is incomplete. Output will include eliminate tags (references).
                     return summaryNode.InnerText.Trim();
                 }
             }
