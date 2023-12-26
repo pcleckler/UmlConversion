@@ -6,7 +6,7 @@ namespace CSharpToUml
     {
         public static readonly RelationshipType ComposedOf = new RelationshipType("Composed Of", "--*");
         public static readonly RelationshipType Extends = new RelationshipType("Extends", "--|>");
-        public static readonly RelationshipType RefersTo = new RelationshipType("Refers To", "-->");
+        public static readonly RelationshipType References = new RelationshipType("References", "-->");
 
         public static List<RelationshipType> All()
         {
@@ -14,7 +14,7 @@ namespace CSharpToUml
             {
                 Extends,
                 ComposedOf,
-                RefersTo,
+                References,
             };
         }
     }
