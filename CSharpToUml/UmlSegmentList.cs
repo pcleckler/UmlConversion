@@ -2,7 +2,7 @@
 
 namespace CSharpToUml
 {
-    public class UmlSegmentList
+    internal class UmlSegmentList
     {
         public static readonly UmlSegment Constructors = new UmlSegment("Constructors", "--");
         public static readonly UmlSegment Events = new UmlSegment("Events", "--");

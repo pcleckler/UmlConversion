@@ -4,17 +4,16 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{4EDBA282-EE30-4383-9F38-604B2BD93625}</ProjectGuid>
-    <OutputType>Exe</OutputType>
-    <RootNamespace>CSharpToUml</RootNamespace>
-    <AssemblyName>CSharpToUml</AssemblyName>
+    <ProjectGuid>{D0D3C4B6-1112-47E9-AB6B-5D6E49864AF6}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>CSharpSampleLibrary</RootNamespace>
+    <AssemblyName>CSharpSampleLibrary</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
-    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <Deterministic>true</Deterministic>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -22,10 +21,9 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <DocumentationFile>bin\Debug\CSharpToUml.xml</DocumentationFile>
+    <DocumentationFile>bin\Debug\CSharpSampleLibrary.xml</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
@@ -44,28 +42,14 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Program.cs" />
+    <Compile Include="BaseClass.cs" />
+    <Compile Include="IBaseInterface.cs" />
+    <Compile Include="DerivedClass.cs" />
+    <Compile Include="IDerivedInterface.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="RelationshipType.cs" />
-    <Compile Include="RelationshipTypeList.cs" />
-    <Compile Include="TypeDiscoveryHandler.cs" />
-    <Compile Include="UmlSegment.cs" />
-    <Compile Include="UmlSegmentList.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="App.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers">
-      <Version>8.0.0</Version>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
+    <Compile Include="SampleEnum.cs" />
+    <Compile Include="SampleEventHandler.cs" />
+    <Compile Include="SampleStruct.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <PropertyGroup>
-    <PreBuildEvent>if not exist "$(SolutionDir)\CSharpSampleLibrary\bin\Debug\UML" mkdir "$(SolutionDir)\CSharpSampleLibrary\bin\Debug\UML"
-
-del /Q "$(SolutionDir)\CSharpSampleLibrary\bin\Debug\UML\*.*"</PreBuildEvent>
-  </PropertyGroup>
 </Project>

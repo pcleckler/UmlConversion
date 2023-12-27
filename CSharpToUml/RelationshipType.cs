@@ -1,6 +1,6 @@
 ﻿namespace CSharpToUml
 {
-    public class RelationshipType
+    internal class RelationshipType
     {
         public RelationshipType(string label, string arrow)
         {

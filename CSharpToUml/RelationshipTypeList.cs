@@ -2,7 +2,7 @@
 
 namespace CSharpToUml
 {
-    public class RelationshipTypeList
+    internal class RelationshipTypeList
     {
         public static readonly RelationshipType ComposedOf = new RelationshipType("Composed Of", "--*");
         public static readonly RelationshipType Extends = new RelationshipType("Extends", "--|>");

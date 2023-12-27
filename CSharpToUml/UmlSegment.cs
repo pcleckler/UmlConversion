@@ -1,6 +1,6 @@
 ﻿namespace CSharpToUml
 {
-    public class UmlSegment
+    internal class UmlSegment
     {
         public UmlSegment(string Name, string Separator)
         {

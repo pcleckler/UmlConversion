@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JavaScriptToUmlConversion",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharpToUml", "CSharpToUml\CSharpToUml.csproj", "{4EDBA282-EE30-4383-9F38-604B2BD93625}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharpSampleLibrary", "CSharpSampleLibrary\CSharpSampleLibrary.csproj", "{D0D3C4B6-1112-47E9-AB6B-5D6E49864AF6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -41,6 +43,18 @@ Global
 		{4EDBA282-EE30-4383-9F38-604B2BD93625}.Release|x64.Build.0 = Release|Any CPU
 		{4EDBA282-EE30-4383-9F38-604B2BD93625}.Release|x86.ActiveCfg = Release|Any CPU
 		{4EDBA282-EE30-4383-9F38-604B2BD93625}.Release|x86.Build.0 = Release|Any CPU
+		{D0D3C4B6-1112-47E9-AB6B-5D6E49864AF6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D0D3C4B6-1112-47E9-AB6B-5D6E49864AF6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D0D3C4B6-1112-47E9-AB6B-5D6E49864AF6}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{D0D3C4B6-1112-47E9-AB6B-5D6E49864AF6}.Debug|x64.Build.0 = Debug|Any CPU
+		{D0D3C4B6-1112-47E9-AB6B-5D6E49864AF6}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{D0D3C4B6-1112-47E9-AB6B-5D6E49864AF6}.Debug|x86.Build.0 = Debug|Any CPU
+		{D0D3C4B6-1112-47E9-AB6B-5D6E49864AF6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D0D3C4B6-1112-47E9-AB6B-5D6E49864AF6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D0D3C4B6-1112-47E9-AB6B-5D6E49864AF6}.Release|x64.ActiveCfg = Release|Any CPU
+		{D0D3C4B6-1112-47E9-AB6B-5D6E49864AF6}.Release|x64.Build.0 = Release|Any CPU
+		{D0D3C4B6-1112-47E9-AB6B-5D6E49864AF6}.Release|x86.ActiveCfg = Release|Any CPU
+		{D0D3C4B6-1112-47E9-AB6B-5D6E49864AF6}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
