@@ -12,18 +12,30 @@ namespace CSharpToUml
 {
     internal class Program
     {
+        private const string ArgNameAddTimestampFooter = "AddTimestampFooter";
+        private const string ArgNameAsmFilename = "AsmFilename";
+        private const string ArgNameMaxTypesPerPage = "MaxTypesPerPage";
+
         private const string NoReferencesGroupId = "No References";
         private const string ReferencesGroupIdPrefix = "Reference Group";
+
+        private static readonly Dictionary<string, object> configuration = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
 
         private static readonly Dictionary<Type, Dictionary<RelationshipType, HashSet<Type>>> relationships = new Dictionary<Type, Dictionary<RelationshipType, HashSet<Type>>>();
 
         private static readonly Dictionary<Type, Dictionary<UmlSegment, List<string>>> umlSegments = new Dictionary<Type, Dictionary<UmlSegment, List<string>>>();
 
+        private static readonly Dictionary<string, Type> uniqueTypeNames = new Dictionary<string, Type>();
+
         private static readonly Dictionary<Type, string> uniqueTypes = new Dictionary<Type, string>();
+
+        private static bool AddTimestampFooter = false;
 
         private static Assembly asm;
 
         private static string asmFilename;
+
+        private static int MaxTypesPerPage = 250;
 
         private static List<Type> typeList;
 
@@ -35,17 +47,9 @@ namespace CSharpToUml
         {
             try
             {
-                if (args.Length < 1)
-                {
-                    Usage();
-                    return;
-                }
+                if (!LoadConfiguration(args)) return;
 
-                if (!LoadAssembly(args))
-                {
-                    Usage();
-                    return;
-                }
+                if (!LoadAssembly()) return;
 
                 LoadComments();
 
@@ -117,38 +121,45 @@ namespace CSharpToUml
                                     .Where((info) => !Regex.IsMatch(info.Name, "get_.*|set_.*|add_.*|remove_.*") && info.DeclaringType == type)
                                     .OrderBy((info) => info.Name.ToLower()))
             {
-                var returnTypeName = GetRelativeTypeName(type, m.ReturnType, GetTypeName(m.ReturnType, (discoveredType, discoveredTypeName) =>
+                CollectMethodUml(type, m);
+            }
+        }
+
+        private static void CollectMethodUml(Type type, MethodInfo m, string overrideName = null)
+        {
+            if (type == null || m == null) return;
+
+            var returnTypeName = GetRelativeTypeName(type, m.ReturnType, GetTypeName(m.ReturnType, (discoveredType, discoveredTypeName) =>
+            {
+                CollectRelationshipAndUniqueType(discoveredType, discoveredTypeName, type, RelationshipTypeList.References);
+            }));
+
+            if (m.IsDefined(typeof(System.Runtime.CompilerServices.ExtensionAttribute), false))
+            {
+                var parameters = m.GetParameters();
+
+                var extensionParameter = parameters[0];
+
+                var extensionTypeTypeName = GetTypeName(extensionParameter.ParameterType, (discoveredType, discoveredTypeName) =>
+                {
+                    CollectRelationshipAndUniqueType(discoveredType, discoveredTypeName, type, RelationshipTypeList.Inherits);
+                });
+
+                var argumentText = GetArgumentText(parameters.Skip(1).ToArray(), (discoveredType, discoveredTypeName) =>
                 {
                     CollectRelationshipAndUniqueType(discoveredType, discoveredTypeName, type, RelationshipTypeList.References);
-                }));
+                });
 
-                if (m.IsDefined(typeof(System.Runtime.CompilerServices.ExtensionAttribute), false))
+                umlSegments[type][UmlSegmentList.Methods].Add($"+ {extensionTypeTypeName}.{m.Name}({argumentText}) : {returnTypeName}");
+            }
+            else
+            {
+                var argumentText = GetArgumentText(m.GetParameters(), (discoveredType, discoveredTypeName) =>
                 {
-                    var parameters = m.GetParameters();
+                    CollectRelationshipAndUniqueType(discoveredType, discoveredTypeName, type, RelationshipTypeList.References);
+                });
 
-                    var extensionParameter = parameters[0];
-
-                    var extensionTypeTypeName = GetTypeName(extensionParameter.ParameterType, (discoveredType, discoveredTypeName) =>
-                    {
-                        CollectRelationshipAndUniqueType(discoveredType, discoveredTypeName, type, RelationshipTypeList.Extends);
-                    });
-
-                    var argumentText = GetArgumentText(parameters.Skip(1).ToArray(), (discoveredType, discoveredTypeName) =>
-                    {
-                        CollectRelationshipAndUniqueType(discoveredType, discoveredTypeName, type, RelationshipTypeList.References);
-                    });
-
-                    umlSegments[type][UmlSegmentList.Methods].Add($"+ {extensionTypeTypeName}.{m.Name}({argumentText}) : {returnTypeName}");
-                }
-                else
-                {
-                    var argumentText = GetArgumentText(m.GetParameters(), (discoveredType, discoveredTypeName) =>
-                    {
-                        CollectRelationshipAndUniqueType(discoveredType, discoveredTypeName, type, RelationshipTypeList.References);
-                    });
-
-                    umlSegments[type][UmlSegmentList.Methods].Add($"+ {m.Name}({argumentText}) : {returnTypeName}");
-                }
+                umlSegments[type][UmlSegmentList.Methods].Add($"+ {overrideName ?? m.Name}({argumentText}) : {returnTypeName}");
             }
         }
 
@@ -215,13 +226,13 @@ namespace CSharpToUml
                 // Base Class
                 GetTypeName(type.BaseType, (discoveredType, discoveredTypeName) =>
                 {
-                    CollectRelationshipAndUniqueType(discoveredType, discoveredTypeName, type, RelationshipTypeList.Extends);
+                    CollectRelationshipAndUniqueType(discoveredType, discoveredTypeName, type, RelationshipTypeList.Inherits);
                 });
 
                 // Declaring Type
                 GetTypeName(type.DeclaringType, (discoveredType, discoveredTypeName) =>
                 {
-                    CollectRelationshipAndUniqueType(discoveredType, discoveredTypeName, type, RelationshipTypeList.Extends);
+                    CollectRelationshipAndUniqueType(discoveredType, discoveredTypeName, type, RelationshipTypeList.Encloses);
                 });
 
                 // Implemented Interfaces
@@ -238,7 +249,7 @@ namespace CSharpToUml
                 {
                     GetTypeName(interfaceType, (discoveredType, discoveredTypeName) =>
                     {
-                        CollectRelationshipAndUniqueType(discoveredType, discoveredTypeName, type, RelationshipTypeList.Extends);
+                        CollectRelationshipAndUniqueType(discoveredType, discoveredTypeName, type, RelationshipTypeList.Implements);
                     });
                 }
 
@@ -246,23 +257,10 @@ namespace CSharpToUml
                 umlSegments[type][UmlSegmentList.Name].Add(
                     $"{GetUmlType(type)} \"{typeName}\" {GetNameAnnotations(type)}");
 
-                // Summary
-                umlSegments[type][UmlSegmentList.Summary].Add(GetSummary(type));
-
                 // Delegates Special Case
                 if (type.IsSubclassOf(typeof(System.MulticastDelegate)))
                 {
-                    var m = type.GetMethod("Invoke");
-
-                    if (m != null)
-                    {
-                        var argumentText = GetArgumentText(m.GetParameters(), (discoveredType, discoveredTypeName) =>
-                        {
-                            CollectRelationshipAndUniqueType(discoveredType, discoveredTypeName, type, RelationshipTypeList.References);
-                        });
-
-                        umlSegments[type][UmlSegmentList.Methods].Add($"+ {GetRelativeTypeName(type, type, typeName)}({argumentText})");
-                    }
+                    CollectMethodUml(type, type.GetMethod("Invoke"), GetRelativeTypeName(type, typeName));
                 }
                 else if (type.IsEnum)
                 {
@@ -288,6 +286,13 @@ namespace CSharpToUml
                     CollectMethodsUml(type);
                 }
             }
+
+            // After collecting all the types, supply summaries. These may contain references to other types.
+            foreach (var type in typeList)
+            {
+                // Summary
+                umlSegments[type][UmlSegmentList.Summary].Add(GetSummary(type));
+            }
         }
 
         private static void CollectUniqueType(Type type, string typeName)
@@ -295,6 +300,11 @@ namespace CSharpToUml
             if (!uniqueTypes.TryGetValue(type, out _))
             {
                 uniqueTypes.Add(type, typeName);
+            }
+
+            if (!uniqueTypeNames.TryGetValue(typeName, out _))
+            {
+                uniqueTypeNames.Add(typeName, type);
             }
         }
 
@@ -346,13 +356,18 @@ namespace CSharpToUml
             {
                 var enumType = GetTypeName(type.GetEnumUnderlyingType(), (discoveredType, discoveredTypeName) =>
                 {
-                    CollectRelationshipAndUniqueType(discoveredType, discoveredTypeName, type, RelationshipTypeList.Extends);
+                    CollectRelationshipAndUniqueType(discoveredType, discoveredTypeName, type, RelationshipTypeList.Inherits);
                 });
 
                 sb.Append($" <<{enumType}>> ");
             }
 
             sb.Append(type.IsSealed ? " <<sealed>> " : "");
+
+            if (type.IsSubclassOf(typeof(System.MulticastDelegate)))
+            {
+                sb.Append("<<delegate>>");
+            }
 
             return sb.ToString();
         }
@@ -466,11 +481,16 @@ namespace CSharpToUml
             return coalescedGroups;
         }
 
+        private static string GetRelativeTypeName(Type type, string typeName)
+        {
+            return typeName.Replace($"{type.Namespace}.", string.Empty);
+        }
+
         private static string GetRelativeTypeName(Type owningType, Type type, string typeName)
         {
             if (type.Namespace == owningType.Namespace)
             {
-                return typeName.Replace($"{owningType.Namespace}.", string.Empty);
+                return GetRelativeTypeName(type, typeName);
             }
 
             return typeName;
@@ -479,22 +499,54 @@ namespace CSharpToUml
         private static string GetSummary(Type type)
         {
             // XPath query to find the comments for the current type
-            string xpathQuery = $"/doc/members/member[starts-with(@name, 'T:{type.FullName}')]/summary";
+            string xpathQuery = $"/doc/members/member[starts-with(@name, 'T:{type.FullName}')]";
 
             if (xmlComments != null)
             {
                 // Select the summary node for the current type
-                XmlNode summaryNode = xmlComments.SelectSingleNode(xpathQuery);
+                XmlNode commentNode = xmlComments.SelectSingleNode(xpathQuery);
 
                 // Display the comments if available
-                if (summaryNode != null)
+                if (commentNode != null)
                 {
-                    // TODO: Summary extraction is incomplete. Output will include eliminate tags (references).
-                    return summaryNode.InnerText.Trim();
+                    foreach (XmlNode node in commentNode)
+                    {
+                        ReplaceSeeNodes(node);
+
+                        if (node.Name.Equals("param", StringComparison.OrdinalIgnoreCase))
+                        {
+                            node.InnerXml = $"//{node.Attributes.GetNamedItem("name").InnerText.Trim()}//: {node.InnerText.Trim()}\r\n";
+                        }
+                        else if (node.Name.Equals("returns", StringComparison.OrdinalIgnoreCase))
+                        {
+                            node.InnerXml = $"//Returns//: {node.InnerText.Trim()}\r\n";
+                        }
+                    }
+
+                    return commentNode.InnerText.Trim();
                 }
             }
 
             return string.Empty;
+
+            void ReplaceSeeNodes(XmlNode targetNode)
+            {
+                // Iterate through each <see> node and replace it with the corresponding type name
+                foreach (XmlNode seeNode in targetNode.SelectNodes("//see[@cref]"))
+                {
+                    var typeName = seeNode.Attributes["cref"].Value.Substring(2);
+
+                    // Replace the content of the <see> node with the calculated replacement
+                    if (uniqueTypeNames.TryGetValue(typeName, out var owningType))
+                    {
+                        seeNode.InnerXml = GetRelativeTypeName(type, owningType, typeName);
+                    }
+                    else
+                    {
+                        seeNode.InnerXml = typeName;
+                    }
+                }
+            }
         }
 
         private static string GetTypeName(Type type, TypeDiscoveryHandler typeDiscoveryHandler = null)
@@ -538,10 +590,18 @@ namespace CSharpToUml
 
             if (typeArguments.Count > 0)
             {
+                typeName = $"{type.Namespace}.{type.Name.Replace($"`{typeArguments.Count}", string.Empty)}";
+
+                var sb = new StringBuilder();
+
                 foreach (var argType in typeArguments)
                 {
-                    GetTypeName(argType, typeDiscoveryHandler);
+                    if (sb.Length > 0) sb.Append(", ");
+
+                    sb.Append(GetTypeName(argType, typeDiscoveryHandler));
                 }
+
+                typeName = $"{typeName}<{sb}>";
             }
 
             typeDiscoveryHandler?.Invoke(type, typeName);
@@ -553,13 +613,21 @@ namespace CSharpToUml
         {
             var umlType = "class";
 
-            if (type.IsAbstract)
-            {
-                umlType = "abstract class";
-            }
-            else if (type.IsInterface)
+            if (type.IsInterface)
             {
                 umlType = "interface";
+            }
+            else if (type.IsSubclassOf(typeof(System.MulticastDelegate)))
+            {
+                umlType = "interface";
+            }
+            else if (type.IsSubclassOf(typeof(System.Exception)))
+            {
+                umlType = "exception";
+            }
+            else if (type.IsAbstract)
+            {
+                umlType = "abstract class";
             }
             else if (type.IsEnum)
             {
@@ -591,10 +659,8 @@ namespace CSharpToUml
             }
         }
 
-        private static bool LoadAssembly(string[] args)
+        private static bool LoadAssembly()
         {
-            asmFilename = args[0];
-
             if (!File.Exists(asmFilename))
             {
                 Console.WriteLine($"File not found: '{asmFilename}'");
@@ -621,6 +687,129 @@ namespace CSharpToUml
                 xmlComments = new XmlDocument();
 
                 xmlComments.Load(xmlCommentsFilename);
+            }
+        }
+
+        private static bool LoadConfiguration(string[] args)
+        {
+            // Collect Configuration from the command line
+            var argumentName = string.Empty;
+
+            foreach (var arg in args)
+            {
+                if (arg.StartsWith("/"))
+                {
+                    CaptureExistingArgumentName();
+
+                    argumentName = arg.Substring(1);
+                }
+                else if (argumentName.Length > 0)
+                {
+                    if (!configuration.ContainsKey(argumentName))
+                    {
+                        configuration.Add(argumentName, arg);
+
+                        argumentName = string.Empty;
+                    }
+                }
+                else
+                {
+                    if (!configuration.ContainsKey(ArgNameAsmFilename))
+                    {
+                        configuration.Add(ArgNameAsmFilename, arg);
+                    }
+                }
+            }
+
+            CaptureExistingArgumentName();
+
+            // Locate Invalid Configuration
+            foreach (var configName in configuration.Keys)
+            {
+                if (!Regex.IsMatch(
+                    configName,
+                    $"^{ArgNameAsmFilename}$|^{ArgNameMaxTypesPerPage}$|^{ArgNameAddTimestampFooter}$",
+                    RegexOptions.IgnoreCase))
+                {
+                    Console.WriteLine();
+                    Console.WriteLine($"Unknown parameter '{configName}'.");
+
+                    Usage();
+
+                    return false;
+                }
+            }
+
+            // Collect Assembly Filename
+            if (!configuration.TryGetValue(ArgNameAsmFilename, out var objAsmFilename))
+            {
+                Usage();
+                return false;
+            }
+            else
+            {
+                asmFilename = (string)objAsmFilename;
+            }
+
+            // Collect MaxTypesPerPage
+            if (configuration.TryGetValue(ArgNameMaxTypesPerPage, out var objMaxTypesPerPage))
+            {
+                if (objMaxTypesPerPage == null)
+                {
+                    Console.WriteLine();
+                    Console.WriteLine($"A value for '{ArgNameMaxTypesPerPage}' was not provided.");
+
+                    Usage();
+
+                    return false;
+                }
+
+                if (int.TryParse((string)objMaxTypesPerPage, out var intMaxTypesPerPage))
+                {
+                    if (intMaxTypesPerPage > 0)
+                    {
+                        MaxTypesPerPage = intMaxTypesPerPage;
+                    }
+                    else
+                    {
+                        Console.WriteLine();
+                        Console.WriteLine($"The value of '{ArgNameMaxTypesPerPage}' must be greater than zero.");
+
+                        Usage();
+
+                        return false;
+                    }
+                }
+            }
+
+            // Collect AddDateFooter
+            AddTimestampFooter = configuration.TryGetValue(ArgNameAddTimestampFooter, out _);
+
+            return true;
+
+            // Local function for outputting command line argument requirements.
+            void Usage()
+            {
+                Console.WriteLine();
+                Console.WriteLine($"Usage: {Path.GetFileName(Assembly.GetExecutingAssembly().Location)} <AssemblyPath> [/{ArgNameMaxTypesPerPage} <TypeCount>] [/{ArgNameAddTimestampFooter}]");
+                Console.WriteLine();
+                Console.WriteLine($"where <AssemblyPath> is the name of the .NET DLL or EXE assembly to inspect");
+                Console.WriteLine($"  and <TypeCount> is the maximum number of type diagrams to generate per UML 'page'");
+                Console.WriteLine($"  and /{ArgNameAddTimestampFooter} indicates that a timestamp footer should be added to the bottom of each UML 'page'.");
+                Console.WriteLine();
+                Console.WriteLine($"Note that arguments can be in any order, but values must follow option names.");
+                Console.WriteLine();
+            }
+
+            void CaptureExistingArgumentName()
+            {
+                if (argumentName.Length > 0)
+                {
+                    if (!configuration.ContainsKey(argumentName))
+                    {
+                        configuration.Add(argumentName, null);
+                    }
+                }
             }
         }
 
@@ -695,11 +884,13 @@ namespace CSharpToUml
 
             if (!typesToOutput.Any()) return;
 
+            var title = $"{Path.GetFileNameWithoutExtension(asmFilename)} {titleNotes}";
+
             var sb = new StringBuilder();
 
             sb.AppendLine("@startUml");
 
-            sb.AppendLine($"title \"{Path.GetFileNameWithoutExtension(asmFilename)} {titleNotes}\"");
+            sb.AppendLine($"title {title}");
 
             bool HasEntriesBelow(Type type, UmlSegment currentUmlSegment)
             {
@@ -722,9 +913,26 @@ namespace CSharpToUml
                 return false;
             }
 
+            var typeCount = 0;
+
             foreach (var type in typesToOutput)
             {
                 if (!uniqueTypes.TryGetValue(type, out var typeName)) continue;
+
+                if (typeCount >= MaxTypesPerPage)
+                {
+                    sb.AppendLine();
+                    // TODO: This is what I want (commented below, and per the documentation). However, it does not work for Class Diagrams yet.
+                    //sb.AppendLine($"newpage \"{title.Trim()} (Continued)\"");
+                    sb.AppendLine($"newpage");
+                    sb.AppendLine();
+
+                    typeCount = 0;
+                }
+                else
+                {
+                    typeCount++;
+                }
 
                 umlSegments[type][UmlSegmentList.Name].ForEach((s) => sb.AppendLine($"{s}"));
 
@@ -766,6 +974,8 @@ namespace CSharpToUml
 
                 sb.AppendLine();
             }
+
+            if (AddTimestampFooter) sb.AppendLine($"footer //Generated {DateTime.Now: MMMM d, yyyy h:mm tt}//");
 
             sb.AppendLine("@endUml");
 
@@ -809,15 +1019,6 @@ namespace CSharpToUml
             }
 
             return false;
-        }
-
-        private static void Usage()
-        {
-            Console.WriteLine();
-            Console.WriteLine($"Usage: {Path.GetFileName(Assembly.GetExecutingAssembly().Location)} <AssemblyPath>");
-            Console.WriteLine();
-            Console.WriteLine("where <AssemblyPath> is the name of the .NET DLL or EXE assembly to inspect.");
-            Console.WriteLine();
         }
     }
 }

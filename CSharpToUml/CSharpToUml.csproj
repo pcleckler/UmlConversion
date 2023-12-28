@@ -64,8 +64,19 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PreBuildEvent>if not exist "$(SolutionDir)\CSharpSampleLibrary\bin\Debug\UML" mkdir "$(SolutionDir)\CSharpSampleLibrary\bin\Debug\UML"
+    <PreBuildEvent>rem ========================
+rem  MailManagerNET - "D:\Drive\Programming\VB.NET\MailManagerNET\MailManager\bin\Debug\MailManager.exe"
+rem ========================
+set outputDirectory=D:\Drive\Programming\VB.NET\MailManagerNET\MailManager\bin\Debug\UML
 
-del /Q "$(SolutionDir)\CSharpSampleLibrary\bin\Debug\UML\*.*"</PreBuildEvent>
+rem ========================
+rem  CSharpSampleLibrary - "D:\Drive\Programming2\C#\UmlConversion\CSharpSampleLibrary\bin\Debug\CSharpSampleLibrary.dll"
+rem ========================
+rem set outputDirectory=$(SolutionDir)\CSharpSampleLibrary\bin\Debug\UML
+
+if not exist "%25outputDirectory%25" mkdir "%25outputDirectory"
+
+del /Q "%25outputDirectory%25\*.*"
+</PreBuildEvent>
   </PropertyGroup>
 </Project>

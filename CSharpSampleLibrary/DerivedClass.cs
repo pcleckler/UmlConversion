@@ -3,7 +3,7 @@
 namespace CSharpSampleLibrary
 {
     /// <summary>
-    /// Sample class derived from <see cref="BaseClass"/>
+    /// Sample class derived from <see cref="BaseClass"/>.
     /// </summary>
     public class DerivedClass : BaseClass
     {
