@@ -4,7 +4,7 @@ This project came from reviewing unsatisfactory results with other C# -> UML con
 
 ## CSharpToUml
 
-This project is for conversion from C# to UML, as the name states. Public classes and interfaces currently handled. Available documentation is pulled in to supply class summary, but current coding does not unpack the contents out of HTML.
+This project is for conversion from C# to UML, as the name states. Public classes, delegates, structs, enums, and interfaces currently handled. Available documentation is pulled in to supply class summary, including SEE references and PARAM and RETURNS nodes for delegates.
 
 ## JavaScriptToUmlConversion
 
